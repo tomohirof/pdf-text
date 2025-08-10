@@ -29,8 +29,8 @@ COPY templates/ ./templates/
 # Java環境変数の設定（必要に応じて）
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 
-# ポート5000を公開
-EXPOSE 5000
+# ポート80を公開
+EXPOSE 80
 
 # Gunicornを使用してFlaskアプリケーションを起動
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "4", "--timeout", "120", "app:app"]
