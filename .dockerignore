@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Project specific
+pdf/
+output/
+*.pdf
+*.xlsx
+*.csv
+*.txt
+extract_pdf_backup*.py
+extract_pdf_final.py
+extract_pdf_improved.py
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/sheep.png
+
+# Testing
+.pytest_cache/
+test_*.py
+
+# CI/CD
+.github/

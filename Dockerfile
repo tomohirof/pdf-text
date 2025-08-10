@@ -26,6 +26,9 @@ COPY app.py .
 # テンプレートディレクトリをコピー
 COPY templates/ ./templates/
 
+# 静的ファイルディレクトリをコピー
+COPY static/ ./static/
+
 # Java環境変数の設定（必要に応じて）
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 
