@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Data Extraction Tool</title>
+    <title>DocLift - Smart PDF Data Extraction</title>
+    <meta name="description" content="Clean tables and text from any PDF — in seconds.">
+    <meta name="keywords" content="PDF extraction, table extraction, data extraction, PDF to Excel, PDF to CSV">
+    <meta property="og:title" content="DocLift - Smart PDF Data Extraction">
+    <meta property="og:description" content="Clean tables and text from any PDF — in seconds.">
     <style>
         :root {
             --bg: #FAF9F6;
@@ -49,8 +53,17 @@
         
         .sub {
             color: var(--text-muted);
+            margin-bottom: 8px;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 20px;
+        }
+        
+        .desc {
+            color: var(--text-muted);
             margin-bottom: 40px;
             font-family: system-ui, -apple-system, sans-serif;
+            font-size: 18px;
+            text-align: center;
         }
         
         
@@ -268,8 +281,9 @@
 </head>
 <body>
     <div class="wrap">
-        <h1>PDF Data Extraction Tool</h1>
-        <p class="sub">Extract tables and text from PDF files with our intelligent hybrid extraction technology.</p>
+        <h1>DocLift</h1>
+        <p class="sub">Smart PDF Data Extraction</p>
+        <p class="desc">Clean tables and text from any PDF — in seconds.</p>
 
         <div class="message error" id="error-message"></div>
         <div class="message success" id="success-message"></div>

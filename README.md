@@ -1,103 +1,105 @@
-# PDF データ抽出ツール
+# DocLift
 
-PDFファイルから表データとテキストを抽出するWebアプリケーションです。
+**Smart PDF Data Extraction** - Clean tables and text from any PDF — in seconds.
 
-![PDF Extractor](https://img.shields.io/badge/PDF-Extractor-purple)
+![DocLift](https://img.shields.io/badge/DocLift-Smart%20PDF%20Extraction-purple)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![Docker](https://img.shields.io/badge/Docker-Ready-green)
 
-## 機能
+## Features
 
-- 📄 PDFからのテキスト抽出
-- 📊 表データの自動検出と抽出（ハイブリッドモード対応）
-- 🔍 縦線検出による最適な抽出モードの自動選択
-- 📁 Excel、CSV、テキスト形式での出力
-- 🎯 ドラッグ&ドロップ対応
-- 📦 結果をZIPファイルでダウンロード
-- 🚀 Docker/CapRover対応
+- 📄 **Text Extraction** - Extract all text content from PDFs
+- 📊 **Smart Table Detection** - Automatically detect and extract tables with hybrid mode
+- 🔍 **Intelligent Mode Selection** - Automatically choose the best extraction method based on PDF structure
+- 📁 **Multiple Output Formats** - Excel, CSV, and text formats
+- 🎯 **Drag & Drop Interface** - Simple and intuitive file upload
+- 📦 **Batch Download** - Get all results in a single ZIP file
+- 🚀 **Production Ready** - Docker and CapRover deployment support
+- 🔢 **Numeric Data Handling** - Properly converts text numbers to Excel numbers (no more green triangles!)
+- 🈯 **Japanese Support** - Full support for Japanese text and number formats
 
-## 必要な環境
+## Requirements
 
 - Python 3.11+
 - Java Runtime Environment (JRE)
 - Docker (オプション)
 
-## セットアップ
+## Setup
 
-### ローカル環境
+### Local Development
 
 ```bash
-# 仮想環境の作成
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 依存関係のインストール
+# Install dependencies
 pip install -r requirements.txt
 
-# アプリケーションの起動
+# Start the application
 python app.py
 ```
 
-### Docker環境
+### Docker
 
 ```bash
-# コンテナのビルドと起動
+# Build and run container
 docker-compose up --build
 
-# ブラウザでアクセス
+# Access in browser
 # http://localhost:5001/
 ```
 
-## 使い方
+## Usage
 
-1. ブラウザで `http://localhost:5001/` にアクセス
-2. PDFファイルをドラッグ&ドロップまたは選択
-3. 「処理を開始」ボタンをクリック
-4. 処理完了後、ZIPファイルが自動的にダウンロード
+1. Open `http://localhost:5001/` in your browser
+2. Drag & drop or select your PDF file
+3. Click "Start Processing" button
+4. Download the ZIP file with all extracted data
 
-## 出力形式
+## Output Formats
 
-- **Excel形式**: すべてのデータを1つのファイルに複数シートで保存
-- **CSV形式**: 各表を個別のファイルとして保存
-- **テキスト形式**: PDFの全テキストを1つのファイルに保存
+- **Excel**: All data in a single file with multiple sheets
+- **CSV**: Each table saved as a separate file
+- **Text**: All text content in a single file
 
-## 技術スタック
+## Tech Stack
 
-- **バックエンド**: Flask (Python) with Gunicorn
-- **PDF処理**: 
-  - PyPDF2 (テキスト抽出)
-  - tabula-py (表抽出)
-  - pdfplumber (縦線検出)
-- **データ処理**: pandas, numpy
-- **フロントエンド**: HTML5, CSS3, JavaScript
-- **コンテナ**: Docker
+- **Backend**: Flask (Python) with Gunicorn
+- **PDF Processing**: 
+  - PyPDF2 (text extraction)
+  - tabula-py (table extraction)
+  - pdfplumber (line detection)
+- **Data Processing**: pandas, numpy
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Container**: Docker
 
-## テスト
+## Testing
 
 ```bash
-# テストの実行
+# Run tests
 python -m pytest test_app.py -v
 ```
 
-## ハイブリッド抽出モード
+## Hybrid Extraction Mode
 
-このツールは、PDFの構造に応じて最適な表抽出モードを自動選択します：
+DocLift automatically selects the optimal table extraction mode based on your PDF structure:
 
-- **Stream モード**: 文字間隔をベースに表を認識（罫線がない表に適している）
-- **Lattice モード**: 罫線をベースに表を認識（罫線がある表に適している）
+- **Stream Mode**: Detects tables based on text spacing (best for tables without borders)
+- **Lattice Mode**: Detects tables based on lines (best for tables with borders)
 
-### 自動選択の仕組み
+### How It Works
 
-1. 各ページの縦線数を検出
-2. 両モードで表を抽出し、品質スコアを計算
-3. より高いスコアの結果を採用
+1. Detects vertical lines on each page
+2. Extracts tables using both modes and calculates quality scores
+3. Selects the result with the higher score
 
-## デプロイ (CapRover)
+## Deployment (CapRover)
 
-1. GitリポジトリをCapRoverに接続
-2. アプリケーション名を設定
-3. デプロイを実行
+1. Connect your Git repository to CapRover
+2. Set up your application name
+3. Deploy
 
-## ライセンス
+## License
 
-このプロジェクトはプライベート利用を目的としています。
+This project is for private use.
