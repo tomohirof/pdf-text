@@ -147,7 +147,142 @@ def extract_tables_hybrid(pdf_path: str, pages: str = 'all') -> Tuple[List[pd.Da
                     mode_info[page_num] = mode
                     break
     
-    return results, mode_info
+    # Try to fix tables with potential column merge issues
+    fixed_results = []
+    for df in results:
+        # Apply both fixing methods
+        fixed_df = fix_merged_columns(df)
+        # Apply advanced post-processing
+        fixed_df = post_process_table(fixed_df)
+        fixed_results.append(fixed_df)
+    
+    return fixed_results, mode_info
+
+def fix_merged_columns(df):
+    """Attempt to fix tables where multiple columns have been merged into one"""
+    if df.empty:
+        return df
+    
+    # Create a copy
+    df_copy = df.copy()
+    
+    # Analyze all cells to detect consistent patterns of space-separated values
+    max_parts_per_column = []
+    split_info = []  # Store information about how to split each column
+    
+    for col_idx in range(len(df_copy.columns)):
+        max_parts = 1
+        # Analyze multiple rows to get a better understanding of the pattern
+        value_patterns = []
+        
+        for _, row in df_copy.iterrows():
+            cell_value = str(row.iloc[col_idx])
+            if cell_value not in ['nan', 'NaN', '', None]:
+                # Count space-separated parts
+                parts = cell_value.split()
+                if len(parts) > 1:
+                    # Analyze each part
+                    part_types = []
+                    for p in parts:
+                        clean_p = p.replace(',', '')
+                        if clean_p.replace('.', '').replace('-', '').isdigit():
+                            part_types.append('NUM')
+                        elif '%' in p:
+                            part_types.append('PCT')
+                        elif any(c.isdigit() for c in p):
+                            part_types.append('MIXED')
+                        else:
+                            part_types.append('TEXT')
+                    
+                    value_patterns.append((len(parts), part_types))
+                    
+                    # If most parts are numeric, consider splitting
+                    numeric_count = sum(1 for t in part_types if t in ['NUM', 'PCT'])
+                    if numeric_count >= len(parts) * 0.5:  # At least half are numeric
+                        max_parts = max(max_parts, len(parts))
+        
+        max_parts_per_column.append(max_parts)
+        split_info.append({'max_parts': max_parts, 'patterns': value_patterns})
+    
+    # If any column needs splitting, rebuild the dataframe
+    if any(m > 1 for m in max_parts_per_column):
+        new_data = []
+        new_columns = []
+        
+        # Generate new column names based on the header and patterns
+        for col_idx, (col_name, info) in enumerate(zip(df_copy.columns, split_info)):
+            max_parts = info['max_parts']
+            
+            if max_parts > 1:
+                col_str = str(col_name).strip()
+                
+                # Special handling for Japanese headers with specific patterns
+                if '実績' in col_str and '見込' in col_str:
+                    # This is likely a merged header like "実績+見込 実績 +見込 達成率※1"
+                    header_parts = col_str.split()
+                    if len(header_parts) >= max_parts:
+                        new_columns.extend(header_parts[:max_parts])
+                    else:
+                        # Generate meaningful names based on pattern
+                        new_columns.extend(header_parts)
+                        for i in range(len(header_parts), max_parts):
+                            new_columns.append(f"列{col_idx}_{i+1}")
+                else:
+                    # Try to split the header intelligently
+                    header_parts = col_str.split()
+                    if len(header_parts) == max_parts:
+                        new_columns.extend(header_parts)
+                    elif len(header_parts) > 1 and len(header_parts) < max_parts:
+                        # Distribute header parts
+                        new_columns.extend(header_parts)
+                        for i in range(len(header_parts), max_parts):
+                            new_columns.append(f"{col_name}_part{i+1}")
+                    else:
+                        # Generate numbered columns
+                        for i in range(max_parts):
+                            new_columns.append(f"{col_name}_col{i+1}")
+            else:
+                new_columns.append(col_name)
+        
+        # Process each row with improved splitting logic
+        for _, row in df_copy.iterrows():
+            new_row = []
+            for col_idx, info in enumerate(split_info):
+                max_parts = info['max_parts']
+                cell_value = str(row.iloc[col_idx])
+                
+                if max_parts > 1:
+                    if cell_value not in ['nan', 'NaN', '', None]:
+                        parts = cell_value.split()
+                        
+                        # Ensure we have exactly max_parts values
+                        if len(parts) >= max_parts:
+                            new_row.extend(parts[:max_parts])
+                        else:
+                            # Intelligent padding based on the pattern
+                            new_row.extend(parts)
+                            # Fill remaining with empty strings
+                            new_row.extend([''] * (max_parts - len(parts)))
+                    else:
+                        # Fill with empty strings for NaN values
+                        new_row.extend([''] * max_parts)
+                else:
+                    new_row.append(cell_value if cell_value not in ['nan', 'NaN', None] else '')
+            
+            new_data.append(new_row)
+        
+        # Create new dataframe with split columns
+        result_df = pd.DataFrame(new_data, columns=new_columns)
+        
+        # Clean up column names
+        result_df.columns = [str(col).strip() for col in result_df.columns]
+        
+        # Remove any completely empty columns that might have been created
+        result_df = result_df.loc[:, (result_df != '').any(axis=0)]
+        
+        return result_df
+    
+    return df_copy
 
 def extract_tables_from_pdf(pdf_path, use_hybrid=True):
     """Extract tables from PDF using tabula-py with optional hybrid mode"""
@@ -165,7 +300,7 @@ def extract_tables_from_pdf(pdf_path, use_hybrid=True):
         return None
 
 def process_table_with_newlines(df):
-    """Process table to handle cells with newline-separated data"""
+    """Process table to handle cells with newline-separated data and space-separated values"""
     processed_rows = []
     
     for _, row in df.iterrows():
@@ -190,6 +325,140 @@ def process_table_with_newlines(df):
     
     # Create new dataframe with processed rows
     processed_df = pd.DataFrame(processed_rows, columns=df.columns)
+    return processed_df
+
+def detect_column_structure(df):
+    """Detect the structure of columns based on patterns in the data"""
+    column_patterns = []
+    
+    for col_idx in range(len(df.columns)):
+        patterns = []
+        for _, row in df.iterrows():
+            cell_value = str(row.iloc[col_idx])
+            if cell_value not in ['nan', 'NaN', '', None]:
+                # Analyze the pattern of the cell
+                parts = cell_value.split()
+                if parts:
+                    # Record pattern: number of parts and their types
+                    pattern = []
+                    for part in parts:
+                        # Remove commas and check if numeric
+                        clean_part = part.replace(',', '').replace('.', '')
+                        if clean_part.replace('-', '').isdigit():
+                            pattern.append('NUM')
+                        elif '%' in part:
+                            pattern.append('PCT')
+                        elif any(c.isdigit() for c in part):
+                            pattern.append('MIXED')
+                        else:
+                            pattern.append('TEXT')
+                    patterns.append(tuple(pattern))
+        
+        # Find the most common pattern for this column
+        if patterns:
+            from collections import Counter
+            most_common_pattern = Counter(patterns).most_common(1)[0][0]
+            column_patterns.append(most_common_pattern)
+        else:
+            column_patterns.append(())
+    
+    return column_patterns
+
+def split_merged_cells_advanced(df):
+    """Advanced splitting of merged cells based on detected patterns"""
+    # First detect column patterns
+    patterns = detect_column_structure(df)
+    
+    # Create new data structure
+    new_data = []
+    max_columns_needed = 0
+    
+    # First pass: determine maximum columns needed
+    for col_idx, pattern in enumerate(patterns):
+        if len(pattern) > 1:
+            max_columns_needed += len(pattern)
+        else:
+            max_columns_needed += 1
+    
+    # Generate appropriate column headers
+    new_columns = []
+    col_counter = 0
+    
+    for col_idx, col_name in enumerate(df.columns):
+        pattern = patterns[col_idx] if col_idx < len(patterns) else ()
+        col_str = str(col_name).strip()
+        
+        if len(pattern) > 1:
+            # Try to intelligently split the header
+            header_parts = col_str.split()
+            if len(header_parts) >= len(pattern):
+                new_columns.extend(header_parts[:len(pattern)])
+            else:
+                # Use pattern to generate meaningful names
+                for i, p in enumerate(pattern):
+                    if i < len(header_parts):
+                        new_columns.append(header_parts[i])
+                    else:
+                        suffix = ''
+                        if p == 'NUM':
+                            suffix = '数値'
+                        elif p == 'PCT':
+                            suffix = '率'
+                        elif p == 'TEXT':
+                            suffix = 'テキスト'
+                        new_columns.append(f"列{col_counter+i+1}_{suffix}")
+            col_counter += len(pattern)
+        else:
+            new_columns.append(col_name)
+            col_counter += 1
+    
+    # Process each row
+    for _, row in df.iterrows():
+        new_row = []
+        for col_idx, pattern in enumerate(patterns):
+            cell_value = str(row.iloc[col_idx])
+            
+            if len(pattern) > 1 and cell_value not in ['nan', 'NaN', '', None]:
+                parts = cell_value.split()
+                # Ensure we match the pattern length
+                if len(parts) >= len(pattern):
+                    new_row.extend(parts[:len(pattern)])
+                else:
+                    new_row.extend(parts + [''] * (len(pattern) - len(parts)))
+            elif len(pattern) > 1:
+                # Fill with empty values for NaN cells
+                new_row.extend([''] * len(pattern))
+            else:
+                new_row.append(cell_value if cell_value not in ['nan', 'NaN', None] else '')
+        
+        new_data.append(new_row)
+    
+    return pd.DataFrame(new_data, columns=new_columns)
+
+def post_process_table(df):
+    """Enhanced post-processing to handle complex table structures"""
+    if df.empty:
+        return df
+    
+    # First try the basic fix_merged_columns
+    # This is already called in extract_tables_hybrid, but we'll ensure it's thorough
+    processed_df = df.copy()
+    
+    # Additional cleanup and normalization
+    # Replace various forms of NaN with empty strings
+    processed_df = processed_df.replace(['nan', 'NaN', None, 'None'], '')
+    
+    # Try advanced splitting if needed
+    if processed_df.shape[1] < 30:  # If we have fewer columns than expected
+        processed_df = split_merged_cells_advanced(processed_df)
+    
+    # Final cleanup
+    processed_df = processed_df.replace(['nan', 'NaN', None], '')
+    
+    # Remove completely empty rows and columns
+    processed_df = processed_df.loc[(processed_df != '').any(axis=1)]
+    processed_df = processed_df.loc[:, (processed_df != '').any(axis=0)]
+    
     return processed_df
 
 def save_to_excel(tables, text, base_filename):
