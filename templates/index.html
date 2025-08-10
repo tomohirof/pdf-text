@@ -44,6 +44,20 @@
             position: relative;
         }
         
+        /* Logo */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            filter: grayscale(100%);
+            opacity: 0.85;
+        }
+        
         /* Typography */
         h1 {
             font-size: 42px;
@@ -281,6 +295,9 @@
 </head>
 <body>
     <div class="wrap">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='sheep.png') }}" alt="DocLift Logo" class="logo">
+        </div>
         <h1>DocLift</h1>
         <p class="sub">Smart PDF Data Extraction</p>
         <p class="desc">Clean tables and text from any PDF — in seconds.</p>
