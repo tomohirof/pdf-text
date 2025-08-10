@@ -11,6 +11,7 @@ from PyPDF2 import PdfReader
 from extract_pdf import extract_text_from_pdf as extract_text_impl
 from extract_pdf import extract_tables_from_pdf as extract_tables_impl
 from extract_pdf import process_table_with_newlines as process_table_impl
+from extract_pdf import convert_to_numeric
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -36,6 +37,8 @@ def save_to_excel(tables, text, base_filename, output_dir):
     with pd.ExcelWriter(excel_filename, engine='openpyxl') as writer:
         for i, df in enumerate(tables):
             processed_df = process_table_with_newlines(df)
+            # Convert numeric strings to actual numbers
+            processed_df = convert_to_numeric(processed_df)
             sheet_name = f'Table_{i+1}'
             processed_df.to_excel(writer, sheet_name=sheet_name, index=False)
         

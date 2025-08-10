@@ -461,6 +461,35 @@ def post_process_table(df):
     
     return processed_df
 
+def convert_to_numeric(df):
+    """Convert string columns to numeric where appropriate"""
+    df_converted = df.copy()
+    
+    for col in df_converted.columns:
+        # Try to convert each column to numeric
+        # First, handle Japanese number formatting (remove commas)
+        temp_col = df_converted[col].astype(str).str.replace(',', '')
+        
+        # Try to convert to numeric, keeping non-numeric as is
+        try:
+            # Use errors='coerce' to convert non-numeric to NaN, then fill back original values
+            numeric_col = pd.to_numeric(temp_col, errors='coerce')
+            
+            # Only convert if at least 30% of non-empty values are numeric
+            non_empty_mask = (df_converted[col].astype(str).str.strip() != '') & (df_converted[col].notna())
+            if non_empty_mask.any():
+                numeric_ratio = numeric_col.notna().sum() / non_empty_mask.sum()
+                
+                if numeric_ratio >= 0.3:
+                    # Replace only the successfully converted numeric values
+                    mask = numeric_col.notna()
+                    df_converted.loc[mask, col] = numeric_col[mask]
+        except:
+            # If conversion fails, keep original
+            pass
+    
+    return df_converted
+
 def save_to_excel(tables, text, base_filename):
     """Save extracted tables and text to Excel file"""
     excel_filename = f"output/{base_filename}_extracted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -469,6 +498,10 @@ def save_to_excel(tables, text, base_filename):
         for i, df in enumerate(tables):
             # Process table to handle newlines
             processed_df = process_table_with_newlines(df)
+            
+            # Convert numeric strings to actual numbers
+            processed_df = convert_to_numeric(processed_df)
+            
             sheet_name = f'Table_{i+1}'
             processed_df.to_excel(writer, sheet_name=sheet_name, index=False)
         
