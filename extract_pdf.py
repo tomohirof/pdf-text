@@ -1,8 +1,11 @@
 import os
 import tabula
 import pandas as pd
+import numpy as np
+import pdfplumber
 from PyPDF2 import PdfReader
 from datetime import datetime
+from typing import List, Optional, Tuple, Dict
 
 def extract_text_from_pdf(pdf_path):
     """Extract text from PDF using PyPDF2"""
@@ -19,11 +22,144 @@ def extract_text_from_pdf(pdf_path):
         print(f"Error extracting text from PDF: {e}")
         return None
 
-def extract_tables_from_pdf(pdf_path):
-    """Extract tables from PDF using tabula-py"""
+def detect_vertical_lines(pdf_path: str, page_num: int, angle_tol_deg: float = 2.0) -> int:
+    """Detect vertical lines in a PDF page using pdfplumber"""
     try:
-        dfs = tabula.read_pdf(pdf_path, pages='all', multiple_tables=True)
-        return dfs
+        with pdfplumber.open(pdf_path) as pdf:
+            if page_num <= 0 or page_num > len(pdf.pages):
+                return 0
+            page = pdf.pages[page_num - 1]
+            lines = page.lines or []
+            count = 0
+            for ln in lines:
+                dx = abs(ln["x1"] - ln["x0"])
+                dy = abs(ln["y1"] - ln["y0"])
+                # Count vertical or nearly vertical lines
+                if dy > 0 and dx / dy < np.tan(np.deg2rad(angle_tol_deg)):
+                    count += 1
+            return count
+    except Exception as e:
+        print(f"Error detecting vertical lines: {e}")
+        return 0
+
+def score_dataframe(df: pd.DataFrame) -> float:
+    """Score extracted table quality (higher is better)"""
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return -1.0
+    
+    # Basic metrics
+    n_cols = df.shape[1]
+    n_rows = df.shape[0]
+    if n_cols <= 1:
+        return -0.5
+    
+    # NaN ratio (lower is better)
+    nan_ratio = df.isna().mean().mean()
+    
+    # Column quality metrics
+    dup_cols_penalty = len(df.columns) - len(set(map(str, df.columns)))
+    empty_cols = sum(df[col].astype(str).str.strip().eq("").mean() > 0.9 for col in df.columns)
+    
+    # Row count penalty for excessive rows (possible misextraction)
+    size_penalty = 0.0
+    if n_rows > 2000:
+        size_penalty = 1.0
+    
+    # Calculate score
+    score = (
+        1.5 * np.log1p(n_rows) +
+        2.0 * np.log1p(n_cols) -
+        3.0 * nan_ratio -
+        1.0 * dup_cols_penalty -
+        1.0 * empty_cols -
+        1.0 * size_penalty
+    )
+    return float(score)
+
+def score_tables(dfs: List[pd.DataFrame]) -> float:
+    """Calculate average score for multiple tables"""
+    if not dfs:
+        return -1.0
+    return float(np.mean([score_dataframe(df) for df in dfs]))
+
+def extract_tables_with_mode(pdf_path: str, pages: str = 'all', mode: str = 'stream', 
+                           guess: bool = True) -> List[pd.DataFrame]:
+    """Extract tables using specified mode (stream or lattice)"""
+    try:
+        kwargs = {'pages': pages, 'multiple_tables': True, 'guess': guess}
+        if mode == 'stream':
+            kwargs['stream'] = True
+        elif mode == 'lattice':
+            kwargs['lattice'] = True
+        else:
+            # Default behavior - let tabula decide
+            pass
+        
+        dfs = tabula.read_pdf(pdf_path, **kwargs)
+        return dfs or []
+    except Exception as e:
+        print(f"Error extracting tables with mode {mode}: {e}")
+        return []
+
+def extract_tables_hybrid(pdf_path: str, pages: str = 'all') -> Tuple[List[pd.DataFrame], Dict[int, str]]:
+    """Extract tables using hybrid approach with automatic mode selection"""
+    results = []
+    mode_info = {}
+    
+    # Determine pages to process
+    if pages == 'all':
+        with pdfplumber.open(pdf_path) as pdf:
+            page_numbers = list(range(1, len(pdf.pages) + 1))
+    else:
+        # For now, handle 'all' case. Can extend to parse page ranges later
+        page_numbers = [1]  # Fallback to first page
+    
+    # Process each page
+    for page_num in page_numbers:
+        # Detect vertical lines
+        vlines = detect_vertical_lines(pdf_path, page_num)
+        initial_mode = 'lattice' if vlines >= 6 else 'stream'
+        
+        # Try both modes
+        dfs_initial = extract_tables_with_mode(pdf_path, str(page_num), mode=initial_mode, guess=True)
+        alt_mode = 'stream' if initial_mode == 'lattice' else 'lattice'
+        dfs_alt = extract_tables_with_mode(pdf_path, str(page_num), mode=alt_mode, guess=True)
+        
+        # Score both results
+        score_initial = score_tables(dfs_initial)
+        score_alt = score_tables(dfs_alt)
+        
+        # Choose better result
+        if score_alt > score_initial:
+            results.extend(dfs_alt)
+            mode_info[page_num] = alt_mode
+        else:
+            results.extend(dfs_initial)
+            mode_info[page_num] = initial_mode
+        
+        # If both failed, try with guess=False
+        if max(score_initial, score_alt) < 0:
+            for mode in ['stream', 'lattice']:
+                dfs_retry = extract_tables_with_mode(pdf_path, str(page_num), mode=mode, guess=False)
+                if score_tables(dfs_retry) > max(score_initial, score_alt):
+                    results = [df for df in results if df is not None]  # Remove previous results for this page
+                    results.extend(dfs_retry)
+                    mode_info[page_num] = mode
+                    break
+    
+    return results, mode_info
+
+def extract_tables_from_pdf(pdf_path, use_hybrid=True):
+    """Extract tables from PDF using tabula-py with optional hybrid mode"""
+    try:
+        if use_hybrid:
+            dfs, mode_info = extract_tables_hybrid(pdf_path)
+            print(f"Hybrid extraction used modes: {mode_info}")
+            return dfs
+        else:
+            # Classic mode - original behavior
+            dfs = tabula.read_pdf(pdf_path, pages='all', multiple_tables=True)
+            return dfs
     except Exception as e:
         print(f"Error extracting tables from PDF: {e}")
         return None

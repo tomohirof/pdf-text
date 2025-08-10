@@ -8,6 +8,9 @@ from werkzeug.utils import secure_filename
 import tabula
 import pandas as pd
 from PyPDF2 import PdfReader
+from extract_pdf import extract_text_from_pdf as extract_text_impl
+from extract_pdf import extract_tables_from_pdf as extract_tables_impl
+from extract_pdf import process_table_with_newlines as process_table_impl
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -16,52 +19,15 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'  # For flash messages
 
 def extract_text_from_pdf(pdf_path):
     """Extract text from PDF using PyPDF2"""
-    try:
-        reader = PdfReader(pdf_path)
-        text = ""
-        
-        for page_num, page in enumerate(reader.pages):
-            text += f"\n--- Page {page_num + 1} ---\n"
-            text += page.extract_text()
-        
-        return text
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-        return None
+    return extract_text_impl(pdf_path)
 
-def extract_tables_from_pdf(pdf_path):
-    """Extract tables from PDF using tabula-py"""
-    try:
-        dfs = tabula.read_pdf(pdf_path, pages='all', multiple_tables=True)
-        return dfs
-    except Exception as e:
-        print(f"Error extracting tables from PDF: {e}")
-        return None
+def extract_tables_from_pdf(pdf_path, use_hybrid=True):
+    """Extract tables from PDF using tabula-py with optional hybrid mode"""
+    return extract_tables_impl(pdf_path, use_hybrid=use_hybrid)
 
 def process_table_with_newlines(df):
     """Process table to handle cells with newline-separated data"""
-    processed_rows = []
-    
-    for _, row in df.iterrows():
-        has_newline = any(isinstance(val, str) and '\r' in val for val in row)
-        
-        if has_newline:
-            max_splits = max([len(str(val).split('\r')) if isinstance(val, str) and '\r' in val else 1 for val in row])
-            
-            for i in range(max_splits):
-                new_row = []
-                for val in row:
-                    if isinstance(val, str) and '\r' in val:
-                        split_vals = val.split('\r')
-                        new_row.append(split_vals[i] if i < len(split_vals) else '')
-                    else:
-                        new_row.append(val if i == 0 else '')
-                processed_rows.append(new_row)
-        else:
-            processed_rows.append(row.tolist())
-    
-    processed_df = pd.DataFrame(processed_rows, columns=df.columns)
-    return processed_df
+    return process_table_impl(df)
 
 def save_to_excel(tables, text, base_filename, output_dir):
     """Save extracted tables and text to Excel file"""
@@ -132,9 +98,9 @@ def extract_pdf():
             pdf_path = os.path.join(temp_dir, filename)
             file.save(pdf_path)
             
-            # Extract text and tables
+            # Extract text and tables (using hybrid mode by default)
             text = extract_text_from_pdf(pdf_path)
-            tables = extract_tables_from_pdf(pdf_path)
+            tables = extract_tables_from_pdf(pdf_path, use_hybrid=True)
             
             if not tables and not text:
                 return jsonify({"error": "No content could be extracted from the PDF"}), 422
@@ -198,9 +164,9 @@ def upload_file():
             pdf_path = os.path.join(temp_dir, filename)
             file.save(pdf_path)
             
-            # Extract text and tables
+            # Extract text and tables (using hybrid mode by default)
             text = extract_text_from_pdf(pdf_path)
-            tables = extract_tables_from_pdf(pdf_path)
+            tables = extract_tables_from_pdf(pdf_path, use_hybrid=True)
             
             if not tables and not text:
                 flash('PDFからデータを抽出できませんでした')
