@@ -32,5 +32,5 @@ ENV JAVA_HOME=/usr/lib/jvm/default-java
 # ポート5000を公開
 EXPOSE 5000
 
-# Flaskアプリケーションを起動
-CMD ["python", "app.py"]
+# Gunicornを使用してFlaskアプリケーションを起動
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
