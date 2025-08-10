@@ -44,18 +44,18 @@
             position: relative;
         }
         
-        /* Logo */
-        .logo-container {
+        /* Illustration */
+        .illustration-container {
             text-align: center;
-            margin-bottom: 24px;
+            margin: 40px 0;
         }
         
-        .logo {
-            width: 120px;
-            height: 120px;
+        .illustration {
+            width: 320px;
+            height: 320px;
             object-fit: contain;
             filter: grayscale(100%);
-            opacity: 0.85;
+            opacity: 0.9;
         }
         
         /* Typography */
@@ -283,6 +283,11 @@
                 font-size: 32px;
             }
             
+            .illustration {
+                width: 240px;
+                height: 240px;
+            }
+            
             .dropzone {
                 padding: 40px 20px;
             }
@@ -295,12 +300,13 @@
 </head>
 <body>
     <div class="wrap">
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='sheep.png') }}" alt="DocLift Logo" class="logo">
-        </div>
         <h1>DocLift</h1>
         <p class="sub">Smart PDF Data Extraction</p>
         <p class="desc">Clean tables and text from any PDF — in seconds.</p>
+        
+        <div class="illustration-container">
+            <img src="{{ url_for('static', filename='sheep.png') }}" alt="Sheep illustration" class="illustration">
+        </div>
 
         <div class="message error" id="error-message"></div>
         <div class="message success" id="success-message"></div>
