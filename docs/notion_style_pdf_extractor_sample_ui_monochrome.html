@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF Data Extraction Tool — Medium-style Minimal</title>
+  <style>
+    :root{
+      --bg: #FAF9F6;
+      --text: #111;
+      --text-muted: #555;
+      --border: #DDD;
+      --border-strong: #AAA;
+      --primary: #000;
+      --radius: 6px;
+      --maxw: 720px;
+    }
+    html,body{height:100%;}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia, 'Times New Roman', serif;line-height:1.6;}
+    .wrap{max-width:var(--maxw);margin:60px auto;padding:0 20px;position:relative;}
+
+    /* Abstract illustrations */
+    .illustration, .illustration2, .illustration3{
+      position:absolute;border-radius:50%;opacity:0.15;pointer-events:none;z-index:-1;
+    }
+    .illustration{
+      top:-40px;right:-60px;width:200px;height:200px;
+      background:radial-gradient(circle at 30% 30%, #6BCB77 0%, transparent 60%),radial-gradient(circle at 70% 70%, #4D96FF 0%, transparent 50%);
+    }
+    .illustration2{
+      bottom:50px;left:-80px;width:150px;height:150px;
+      background:radial-gradient(circle at 40% 40%, #FFD93D 0%, transparent 60%),radial-gradient(circle at 60% 60%, #6BCB77 0%, transparent 50%);
+    }
+    .illustration3{
+      bottom:-60px;right:-60px;width:180px;height:180px;
+      background:radial-gradient(circle at 50% 50%, #4D96FF 0%, transparent 60%),radial-gradient(circle at 60% 40%, #FF6B6B 0%, transparent 50%);
+    }
+
+    /* Typography */
+    h1{font-size:42px;font-weight:700;margin-bottom:8px;}
+    .sub{color:var(--text-muted);margin-bottom:40px;font-family:system-ui,sans-serif;}
+
+    /* Dropzone */
+    .dropzone{border:1px dashed var(--border);border-radius:var(--radius);padding:40px;text-align:center;background:#fff;font-family:system-ui,sans-serif;transition:all 0.2s ease;}
+    .dropzone.dragover{border:1px solid var(--border-strong);background:#F0F0F0;}
+    .dropzone.has-file{border:1px solid var(--primary);background:#fffbe6;}
+    .dz-title{font-weight:600;font-size:18px;}
+    .dz-sub{color:var(--text-muted);margin-top:4px;}
+
+    /* File list */
+    .filelist{list-style:none;margin:20px 0 0;padding:0;font-family:system-ui,sans-serif;}
+    .file-row{padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+    .size{color:var(--text-muted);font-size:14px;}
+
+    /* Buttons */
+    .btn-primary{background:var(--primary);color:#fff;border:none;border-radius:var(--radius);padding:12px 20px;font-weight:bold;cursor:pointer;font-family:system-ui,sans-serif;}
+    .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+
+    /* Progress */
+    .progress{margin-top:28px;border-top:1px solid var(--border);padding-top:18px;text-align:left;font-family:system-ui,sans-serif;}
+    .progress-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .muted{color:var(--text-muted);font-size:14px;}
+    .badge{display:inline-block;border:1px solid var(--border);padding:2px 6px;border-radius:999px;font-size:12px;color:var(--text-muted)}
+    .steps{list-style:none;padding:0;margin:12px 0 0 0}
+    .steps li{display:flex;gap:10px;align-items:baseline;margin:8px 0;color:var(--text-muted)}
+    .steps li.active{color:var(--text)}
+    .dot{display:inline-block;width:8px;height:8px;border:1px solid var(--text);border-radius:50%;margin-top:4px}
+    .steps li.done .dot{background:var(--text)}
+    .live-log{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;border:1px solid var(--border);background:#fff;padding:10px;border-radius:6px;height:120px;overflow:auto;color:#333;margin-top:12px}
+
+    /* Result & Alert */
+    .result{text-align:center;font-family:system-ui,sans-serif;margin-top:30px}
+    .alert{text-align:center;font-family:system-ui,sans-serif;margin-top:30px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="illustration"></div>
+    <div class="illustration2"></div>
+    <div class="illustration3"></div>
+    <h1>PDF Data Extraction Tool</h1>
+    <p class="sub">Extract tables and text from PDF files and download as a ZIP.</p>
+
+    <section class="dropzone" id="dropzone">
+      <div class="dz-title" id="dz-title">Drag & drop a PDF here</div>
+      <div class="dz-sub" id="dz-sub">or click to select a file</div>
+      <input id="file-input" type="file" accept="application/pdf" hidden />
+    </section>
+
+    <ul class="filelist" id="filelist"></ul>
+
+    <div style="margin-top:20px">
+      <button id="startBtn" class="btn-primary" disabled>Start Processing</button>
+    </div>
+
+    <div class="progress" id="progress" hidden>
+      <div class="progress-header">
+        <p style="margin:0;font-weight:600">Processing your PDF… <span id="phaseBadge" class="badge">Queued</span></p>
+        <span id="percent" class="muted">0%</span>
+      </div>
+      <ul class="steps" id="steps">
+        <li class="active" data-key="upload"><span class="dot"></span> Upload</li>
+        <li data-key="parse"><span class="dot"></span> Parse pages</li>
+        <li data-key="detect"><span class="dot"></span> Detect tables</li>
+        <li data-key="extract"><span class="dot"></span> Extract data</li>
+        <li data-key="post"><span class="dot"></span> Post-process & validate</li>
+        <li data-key="zip"><span class="dot"></span> Package ZIP</li>
+      </ul>
+      <div class="live-log" id="liveLog" aria-live="polite"></div>
+      <p class="muted" style="margin-top:8px">You can keep this tab in background; progress updates live.</p>
+    </div>
+
+    <div class="result" id="result" hidden>
+      <p id="summary">1 file processed • 3 tables • 12 pages</p>
+      <a id="downloadLink" class="btn-primary" href="#" download="result.zip">Download ZIP</a>
+    </div>
+
+    <div class="alert" id="errorBox" hidden>
+      <strong>We couldn’t process this file.</strong>
+      <p class="muted">Unsupported layout detected.</p>
+    </div>
+  </div>
+
+  <script>
+    const dz = document.getElementById('dropzone');
+    const fi = document.getElementById('file-input');
+    const filelist = document.getElementById('filelist');
+    const dzTitle = document.getElementById('dz-title');
+    const dzSub = document.getElementById('dz-sub');
+    const startBtn = document.getElementById('startBtn');
+
+    const progress = document.getElementById('progress');
+    const stepsEl = document.getElementById('steps');
+    const percentEl = document.getElementById('percent');
+    const phaseBadge = document.getElementById('phaseBadge');
+    const liveLog = document.getElementById('liveLog');
+    const result = document.getElementById('result');
+    const downloadLink = document.getElementById('downloadLink');
+
+    dz.addEventListener('click',()=>fi.click());
+    dz.addEventListener('dragover', e => {e.preventDefault();dz.classList.add('dragover');});
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+    dz.addEventListener('drop', e => {e.preventDefault();dz.classList.remove('dragover');handleFiles(e.dataTransfer.files)});
+    fi.addEventListener('change', ()=> handleFiles(fi.files));
+
+    function handleFiles(fileList){
+      const files = Array.from(fileList).filter(f=>/pdf$/i.test(f.name));
+      if(!files.length) return;
+      renderFiles(files);
+      dz.classList.add('has-file');
+      dzTitle.textContent = 'File ready for processing';
+      dzSub.textContent = files[0].name;
+      startBtn.disabled = false;
+    }
+
+    function renderFiles(files){
+      filelist.innerHTML = '';
+      files.forEach(f=>{
+        const li = document.createElement('li');
+        li.className = 'file-row';
+        li.innerHTML = `<span>${f.name}</span><span class="size">${(f.size/1024).toFixed(1)} KB</span>`;
+        filelist.appendChild(li);
+      });
+    }
+
+    startBtn.addEventListener('click', ()=>{
+      progress.hidden = false; result.hidden = true; liveLog.textContent=''; setPercent(0); resetSteps();
+      simulateProgress(()=>{
+        const blob = new Blob(['fake zip'], {type:'application/zip'});
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        result.hidden = false;
+      });
+    });
+
+    function resetSteps(){
+      const items = stepsEl.querySelectorAll('li');
+      items.forEach((li,i)=>{ li.classList.remove('done','active'); if(i===0) li.classList.add('active'); });
+      phaseBadge.textContent = 'Queued';
+    }
+    function setActiveStep(key){
+      const items = Array.from(stepsEl.querySelectorAll('li'));
+      items.forEach(li=>{
+        if(li.dataset.key===key){
+          items.forEach(x=>x.classList.remove('active'));
+          li.classList.add('active');
+          const idx = items.indexOf(li);
+          for(let i=0;i<idx;i++) items[i].classList.add('done');
+        }
+      });
+    }
+    function setPercent(p){ percentEl.textContent = Math.round(p) + '%'; }
+    function log(line){ const at = new Date().toLocaleTimeString(); liveLog.textContent += `[${at}] ${line}\n`; liveLog.scrollTop = liveLog.scrollHeight; }
+
+    function simulateProgress(onDone){
+      const flow = [
+        {key:'upload', label:'Uploading file', pct:15},
+        {key:'parse', label:'Parsing pages', pct:40},
+        {key:'detect', label:'Detecting tables', pct:60},
+        {key:'extract', label:'Extracting data', pct:80},
+        {key:'post', label:'Validating & cleaning', pct:92},
+        {key:'zip', label:'Packaging ZIP', pct:100}
+      ];
+      let i=0; phaseBadge.textContent='Running';
+      const tick = ()=>{
+        const step = flow[i];
+        setActiveStep(step.key); log(step.label + '…'); setPercent(step.pct);
+        if(++i < flow.length) setTimeout(tick, 700);
+        else { phaseBadge.textContent='Completed'; log('Job finished.'); onDone(); }
+      };
+      tick();
+    }
+  </script>
+</body>
+</html>

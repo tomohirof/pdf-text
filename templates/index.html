@@ -3,204 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF データ抽出ツール</title>
+    <title>PDF Data Extraction Tool</title>
     <style>
+        :root {
+            --bg: #FAF9F6;
+            --text: #111;
+            --text-muted: #555;
+            --border: #DDD;
+            --border-strong: #AAA;
+            --primary: #000;
+            --radius: 6px;
+            --maxw: 720px;
+        }
+        
         * {
             box-sizing: border-box;
         }
         
+        html, body {
+            height: 100%;
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1.6;
         }
         
-        .container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            max-width: 600px;
-            width: 90%;
-            margin: 20px;
+        .wrap {
+            max-width: var(--maxw);
+            margin: 60px auto;
+            padding: 0 20px;
+            position: relative;
         }
         
+        /* Typography */
         h1 {
-            color: #333;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .sub {
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        
+        /* Dropzone */
+        .dropzone {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 60px 40px;
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 28px;
+            background: #fff;
+            font-family: system-ui, -apple-system, sans-serif;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .dropzone.dragover {
+            border: 1px solid var(--border-strong);
+            background: #F0F0F0;
+        }
+        
+        .dropzone.has-file {
+            border: 1px solid var(--primary);
+            background: #fffbe6;
+        }
+        
+        .dz-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .dz-title {
             font-weight: 600;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .feature {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 13px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .feature-icon {
-            font-size: 24px;
+            font-size: 18px;
             margin-bottom: 5px;
         }
         
-        .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px 20px;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            background-color: #fafbff;
-        }
-        
-        .upload-area:hover {
-            border-color: #764ba2;
-            background-color: #f5f7ff;
-        }
-        
-        .upload-area.drag-over {
-            border-color: #764ba2;
-            background-color: #eef2ff;
-            transform: scale(1.02);
-        }
-        
-        .upload-icon {
-            font-size: 48px;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        
-        .upload-text {
-            color: #666;
-            margin-bottom: 10px;
-        }
-        
-        .upload-hint {
-            color: #999;
+        .dz-sub {
+            color: var(--text-muted);
             font-size: 14px;
         }
         
-        input[type="file"] {
-            display: none;
-        }
-        
+        /* File info */
         .file-info {
-            background-color: #f0f4ff;
-            padding: 15px;
-            border-radius: 10px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
             margin: 20px 0;
             display: none;
+            font-family: system-ui, -apple-system, sans-serif;
         }
         
         .file-name {
-            color: #333;
-            font-weight: 500;
+            font-weight: 600;
             margin-bottom: 5px;
         }
         
         .file-size {
-            color: #666;
+            color: var(--text-muted);
             font-size: 14px;
         }
         
-        .submit-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        /* Buttons */
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 500;
+            border-radius: var(--radius);
+            padding: 14px 28px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            transition: opacity 0.2s ease;
+            width: 100%;
         }
         
-        .submit-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.8;
         }
         
-        .submit-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-        
-        .submit-btn:disabled {
-            background: #ccc;
+        .btn-primary:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-            box-shadow: none;
+        }
+        
+        /* Messages */
+        .message {
+            padding: 15px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            display: none;
+            font-family: system-ui, -apple-system, sans-serif;
         }
         
         .error {
-            background-color: #fee;
+            background: #fee;
             color: #c33;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-            animation: shake 0.5s;
+            border: 1px solid #fcc;
         }
         
         .success {
-            background-color: #e7f5e7;
+            background: #efe;
             color: #2d662d;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
+            border: 1px solid #cfc;
         }
         
+        /* Processing */
         .processing {
             text-align: center;
-            padding: 40px;
+            padding: 60px 40px;
             display: none;
+            font-family: system-ui, -apple-system, sans-serif;
         }
         
         .spinner {
-            width: 60px;
-            height: 60px;
+            width: 48px;
+            height: 48px;
             margin: 0 auto 20px;
-            border: 4px solid #f3f3f3;
+            border: 3px solid #f3f3f3;
             border-radius: 50%;
-            border-top: 4px solid #667eea;
+            border-top: 3px solid var(--primary);
             animation: spin 1s linear infinite;
         }
         
         .processing-text {
-            color: #666;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: 600;
             margin-bottom: 10px;
         }
         
         .processing-hint {
-            color: #999;
+            color: var(--text-muted);
             font-size: 14px;
+        }
+        
+        /* Progress steps */
+        .progress-steps {
+            list-style: none;
+            padding: 0;
+            margin: 30px 0 0 0;
+            display: inline-block;
+            text-align: left;
+        }
+        
+        .progress-step {
+            color: var(--text-muted);
+            margin: 8px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .progress-step.active {
+            color: var(--text);
+            font-weight: 600;
+        }
+        
+        .progress-step.completed {
+            color: var(--text-muted);
+        }
+        
+        .step-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+        
+        .progress-step.active .step-indicator {
+            background: var(--primary);
+            animation: pulse 1s infinite;
+        }
+        
+        .progress-step.completed .step-indicator {
+            background: var(--primary);
         }
         
         @keyframes spin {
@@ -208,49 +237,49 @@
             100% { transform: rotate(360deg); }
         }
         
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .max-size {
             text-align: center;
-            color: #999;
+            color: var(--text-muted);
             font-size: 12px;
-            margin-top: 10px;
+            margin-top: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 32px;
+            }
+            
+            .dropzone {
+                padding: 40px 20px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>PDF データ抽出ツール</h1>
-        <p class="subtitle">PDFファイルから表データとテキストを簡単に抽出</p>
-        
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">📄</div>
-                <div>テキスト抽出</div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">📊</div>
-                <div>表データ抽出</div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">📁</div>
-                <div>複数形式で出力</div>
-            </div>
-        </div>
+    <div class="wrap">
+        <h1>PDF Data Extraction Tool</h1>
+        <p class="sub">Extract tables and text from PDF files with our intelligent hybrid extraction technology.</p>
 
-        <div class="error" id="error-message"></div>
-        <div class="success" id="success-message"></div>
+        <div class="message error" id="error-message"></div>
+        <div class="message success" id="success-message"></div>
 
         <form action="/upload" method="POST" enctype="multipart/form-data" class="upload-form" id="upload-form">
-            <div class="upload-area" id="upload-area">
-                <div class="upload-icon">📤</div>
-                <div class="upload-text">PDFファイルをドラッグ＆ドロップ</div>
-                <div class="upload-hint">または クリックしてファイルを選択</div>
-                <input type="file" name="file" id="file" accept=".pdf" required>
+            <div class="dropzone" id="dropzone">
+                <div class="dz-icon">📄</div>
+                <div class="dz-title" id="dz-title">Drag & drop your PDF here</div>
+                <div class="dz-sub" id="dz-sub">or click to select a file</div>
+                <input type="file" name="file" id="file" accept=".pdf" required style="display: none;">
             </div>
             
             <div class="file-info" id="file-info">
@@ -258,14 +287,36 @@
                 <div class="file-size" id="file-size"></div>
             </div>
             
-            <button type="submit" class="submit-btn" id="submit-btn" disabled>処理を開始</button>
-            <div class="max-size">最大ファイルサイズ: 16MB</div>
+            <button type="submit" class="btn-primary" id="submit-btn" disabled>Start Processing</button>
+            <div class="max-size">Maximum file size: 16MB</div>
         </form>
 
         <div class="processing" id="processing">
             <div class="spinner"></div>
-            <div class="processing-text">PDFを処理中です...</div>
-            <div class="processing-hint">複雑なPDFの場合、少し時間がかかることがあります</div>
+            <div class="processing-text">Processing your PDF...</div>
+            <div class="processing-hint">This may take a moment for complex documents</div>
+            <ul class="progress-steps" id="progress-steps">
+                <li class="progress-step" data-step="upload">
+                    <span class="step-indicator"></span>
+                    <span>Uploading file</span>
+                </li>
+                <li class="progress-step" data-step="extract">
+                    <span class="step-indicator"></span>
+                    <span>Extracting text content</span>
+                </li>
+                <li class="progress-step" data-step="detect">
+                    <span class="step-indicator"></span>
+                    <span>Detecting tables</span>
+                </li>
+                <li class="progress-step" data-step="process">
+                    <span class="step-indicator"></span>
+                    <span>Processing data</span>
+                </li>
+                <li class="progress-step" data-step="package">
+                    <span class="step-indicator"></span>
+                    <span>Creating ZIP file</span>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -276,26 +327,28 @@
         const errorDiv = document.getElementById('error-message');
         const successDiv = document.getElementById('success-message');
         const processingDiv = document.getElementById('processing');
-        const uploadArea = document.getElementById('upload-area');
+        const dropzone = document.getElementById('dropzone');
         const fileInfo = document.getElementById('file-info');
         const fileName = document.getElementById('file-name');
         const fileSize = document.getElementById('file-size');
+        const dzTitle = document.getElementById('dz-title');
+        const dzSub = document.getElementById('dz-sub');
 
-        // ドラッグ&ドロップイベント
-        uploadArea.addEventListener('click', () => fileInput.click());
+        // Drag & drop events
+        dropzone.addEventListener('click', () => fileInput.click());
 
-        uploadArea.addEventListener('dragover', (e) => {
+        dropzone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('drag-over');
+            dropzone.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('drag-over');
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
         });
 
-        uploadArea.addEventListener('drop', (e) => {
+        dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('drag-over');
+            dropzone.classList.remove('dragover');
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
@@ -304,7 +357,7 @@
             }
         });
 
-        // ファイル選択イベント
+        // File selection event
         fileInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 handleFileSelect(this.files[0]);
@@ -314,21 +367,26 @@
         function handleFileSelect(file) {
             const maxSize = 16 * 1024 * 1024; // 16MB
             
-            // ファイルタイプチェック
+            // File type check
             if (!file.name.toLowerCase().endsWith('.pdf')) {
-                showError('PDFファイルのみアップロード可能です。');
+                showError('Only PDF files are allowed.');
                 return;
             }
             
-            // ファイルサイズチェック
+            // File size check
             if (file.size > maxSize) {
-                showError('ファイルサイズが大きすぎます。16MB以下のファイルを選択してください。');
+                showError('File size too large. Please select a file under 16MB.');
                 return;
             }
             
-            // ファイル情報を表示
+            // Update UI
+            dropzone.classList.add('has-file');
+            dzTitle.textContent = 'File ready for processing';
+            dzSub.textContent = file.name;
+            
+            // Show file info
             fileName.textContent = file.name;
-            fileSize.textContent = `ファイルサイズ: ${formatFileSize(file.size)}`;
+            fileSize.textContent = `Size: ${formatFileSize(file.size)}`;
             fileInfo.style.display = 'block';
             submitBtn.disabled = false;
             errorDiv.style.display = 'none';
@@ -342,7 +400,46 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // フォーム送信
+        // Progress step management
+        function updateProgressStep(stepName) {
+            const steps = document.querySelectorAll('.progress-step');
+            let foundCurrent = false;
+            
+            steps.forEach(step => {
+                const isCurrentStep = step.dataset.step === stepName;
+                
+                if (isCurrentStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                    foundCurrent = true;
+                } else if (!foundCurrent) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        function simulateProgress() {
+            const steps = ['upload', 'extract', 'detect', 'process', 'package'];
+            let currentStep = 0;
+            
+            updateProgressStep(steps[0]);
+            
+            const interval = setInterval(() => {
+                currentStep++;
+                if (currentStep < steps.length) {
+                    updateProgressStep(steps[currentStep]);
+                } else {
+                    clearInterval(interval);
+                }
+            }, 800); // Change step every 800ms
+            
+            return interval;
+        }
+
+        // Form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -350,13 +447,16 @@
 
             const file = fileInput.files[0];
             
-            // 処理中の表示
+            // Show processing
             form.style.display = 'none';
             processingDiv.style.display = 'block';
             errorDiv.style.display = 'none';
             successDiv.style.display = 'none';
+            
+            // Start progress simulation
+            const progressInterval = simulateProgress();
 
-            // FormDataを使用してファイルをアップロード
+            // Upload file
             const formData = new FormData();
             formData.append('file', file);
 
@@ -368,11 +468,15 @@
                 if (response.ok) {
                     return response.blob();
                 } else {
-                    throw new Error('処理中にエラーが発生しました');
+                    throw new Error('An error occurred during processing');
                 }
             })
             .then(blob => {
-                // ダウンロードリンクを作成
+                // Clear progress interval
+                clearInterval(progressInterval);
+                updateProgressStep('package');
+                
+                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -382,25 +486,38 @@
                 a.click();
                 window.URL.revokeObjectURL(url);
 
-                // 成功メッセージを表示
-                showSuccess('処理が完了しました！ZIPファイルをダウンロードしています。');
+                // Show success message
+                showSuccess('Processing complete! Your download will start automatically.');
 
-                // UIを元に戻す
+                // Reset UI after delay
                 setTimeout(() => {
-                    form.style.display = 'block';
-                    processingDiv.style.display = 'none';
-                    fileInput.value = '';
-                    fileInfo.style.display = 'none';
-                    submitBtn.disabled = true;
-                    successDiv.style.display = 'none';
+                    resetForm();
                 }, 3000);
             })
             .catch(error => {
+                clearInterval(progressInterval);
                 showError(error.message);
                 form.style.display = 'block';
                 processingDiv.style.display = 'none';
             });
         });
+
+        function resetForm() {
+            form.style.display = 'block';
+            processingDiv.style.display = 'none';
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            submitBtn.disabled = true;
+            successDiv.style.display = 'none';
+            dropzone.classList.remove('has-file');
+            dzTitle.textContent = 'Drag & drop your PDF here';
+            dzSub.textContent = 'or click to select a file';
+            
+            // Reset progress steps
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+        }
 
         function showError(message) {
             errorDiv.textContent = message;
